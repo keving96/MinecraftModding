@@ -1,39 +1,32 @@
 package com.mymod.moc;
 
 import java.util.Map;
-//import java.util.Random;
-import net.minecraft.network.chat.TextComponent; // import net.minecraft.util.text.StringTextComponent; ?
-import net.minecraft.server.level.ServerLevel; // import net.minecraft.world.server.ServerWorld; ?
+import net.minecraft.network.chat.TextComponent;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.stats.Stats;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block; // import net.minecraft.block.Block;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.OreBlock;
 import net.minecraft.world.level.block.RedStoneOreBlock;
-import net.minecraft.world.level.block.state.BlockState; // import net.minecraft.block.BlockState;
-import net.minecraft.world.level.block.Blocks; // import net.minecraft.block.Blocks;
-import net.minecraft.core.BlockPos; // import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.item.Item; // import net.minecraft.item.Item;
-import net.minecraft.world.item.ItemStack; // import net.minecraft.item.ItemStack;
-import net.minecraft.world.item.enchantment.Enchantment; // import net.minecraft.enchantment.Enchantment;
-import net.minecraft.world.item.enchantment.EnchantmentHelper; // import net.minecraft.enchantment.EnchantmentHelper;
-import net.minecraft.world.item.enchantment.Enchantments; // import net.minecraft.enchantment.Enchantments;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.client.Minecraft;
-import net.minecraft.world.entity.player.Player; // import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.core.Direction; // import net.minecraft.util.Direction;
-import net.minecraft.world.level.LevelAccessor; // import net.minecraft.world.World;
-//import net.minecraftforge.api.distmarker.Dist;
-//import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.LevelAccessor;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.world.BlockEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraft.client.KeyMapping; // import net.minecraft.client.settings.KeyBinding;
-import net.minecraftforge.fmlclient.registry.ClientRegistry; // net.minecraftforge.fml.client.registry.ClientRegistry;
+import net.minecraft.client.KeyMapping;
+import net.minecraftforge.client.ClientRegistry;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.client.event.InputEvent;
-//import org.apache.logging.log4j.core.jmx.Server;
-//import org.lwjgl.system.CallbackI;
-
-//import net.minecraft.entity.player.ServerPlayerEntity;
-//import net.minecraft.world.level.gameevent.GameEvent;
 
 
 @Mod("moc")
@@ -47,6 +40,7 @@ public class MineOreCluster {
     private LevelAccessor world;
     private ItemStack itemStack;
     private BlockState blockState;
+    private Item item;
     private boolean mocIsDisabled = false;
     private int fortune;
     private int silktouch;
@@ -61,7 +55,7 @@ public class MineOreCluster {
         // For key codes see: net.minecraft.client.util.InputMappings
         // key code 77 = m
         myKey = new KeyMapping("Toggle MOC", 77, "key.categories.misc");
-        // Register key so it will be displayed in the controls menu.
+        // Register key, so it will be displayed in the control's menu.
         ClientRegistry.registerKeyBinding(myKey);
     }
 
@@ -85,23 +79,29 @@ public class MineOreCluster {
             Block block = this.blockState.getBlock();
             this.player = event.getPlayer();
             this.itemStack = this.player.getMainHandItem();
-            Item item = this.itemStack.getItem();
+            item = this.itemStack.getItem();
             this.world = event.getWorld();
             assert Minecraft.getInstance().player != null;
             boolean isCreative = Minecraft.getInstance().player.isCreative(); //playerController.isInCreativeMode();
 
             // Set values for variables fortune and silktouch
             handleEnchantment();
-
-            if (isOreBlock(block) && item instanceof net.minecraft.world.item.PickaxeItem && item.canHarvestBlock(this.itemStack, this.blockState) && !isCreative) {
+            //canAttackBlock(BlockState, Level, BlockPos, Player)
+            if (isOreBlock(block)
+                    && item instanceof net.minecraft.world.item.PickaxeItem
+                    && item.canAttackBlock(this.blockState, (Level) this.world, blockPos, this.player)
+                    && !isCreative) {
                 if (hasSameTypeNeighbour(blockPos, block)) {
                     for (Direction direction : UPDATE_ORDER) {
                         mineOreRecursive(direction, block, blockPos);
                     }
                     // disabling this would calculate x+1 destroyed block instead of x number of destroyed blocks
                     this.itemStack.setDamageValue(this.itemStack.getDamageValue() - 1);
+                    // like itemStack.setDamageValue but for the number of times used for the pickaxe
+                    player.awardStat(Stats.ITEM_USED.get(item), - 1);
                 }
             }
+
         }
     }
 
@@ -125,6 +125,9 @@ public class MineOreCluster {
 
             // damage the pickaxe by 1
             this.itemStack.setDamageValue(this.itemStack.getDamageValue() + 1);
+
+            // add + 1 of times used for pickaxe
+            player.awardStat(Stats.ITEM_USED.get(item));
 
             // attempt to mine neighbor blocks
             mineOreRecursive(Direction.DOWN, startingBlock, pos);
