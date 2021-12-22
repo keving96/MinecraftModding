@@ -26,6 +26,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraft.client.KeyMapping;
 import net.minecraftforge.client.ClientRegistry;
 import net.minecraftforge.fml.common.Mod;
+//import net.minecraftforge.common.ForgeMod;
 import net.minecraftforge.client.event.InputEvent;
 
 
@@ -65,7 +66,6 @@ public class MineOreCluster {
             mocIsDisabled = !mocIsDisabled;
             if (mocIsDisabled) {
                 Minecraft.getInstance().gui.getChat().addMessage(new TextComponent("MOC disabled"));
-                //Minecraft.getInstance().ingameGUI.getChatGUI().printChatMessage(new StringTextComponent("MOC disabled"));
             } else
                 Minecraft.getInstance().gui.getChat().addMessage(new TextComponent("MOC enabled"));
         }
